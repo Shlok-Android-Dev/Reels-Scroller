@@ -1,0 +1,19 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Base.Theme.MyReels" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Customize your light theme here. -->
+        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+    </style>
+
+    <style name="Theme.MyReels" parent="Base.Theme.MyReels" />
+    <style name="FullScreen" parent="Theme.Material3.DayNight.NoActionBar">
+
+        <item name="android:windowNoTitle" type="true"/>
+        <item name="android:windowActionBar" type="false"/>
+        <item name="android:windowFullscreen" type="true"/>
+        <item name="android:windowContentOverlay" type="@null"/>
+
+    </style>
+        
+
+</resources>
