@@ -6,29 +6,54 @@ import androidx.viewpager2.widget.ViewPager2
 import com.example.myreels.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
-    private lateinit var adapter: ReelsAdapter
     private lateinit var reelsList: MutableList<ReelsModel>
-    private lateinit var viewPager: ViewPager2
     private lateinit var binding: ActivityMainBinding
+    private lateinit var reelsAdapter: ReelsAdapter
+    private var previousIndex = -1
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Initialize the reels list
-        reelsList = mutableListOf()
+        reelsList = mutableListOf(
+            ReelsModel(videoUrl = "android.resource://${packageName}/${R.raw.a}", title = "sample", decs = getString(R.string.longString)),
+            ReelsModel(videoUrl = "android.resource://${packageName}/${R.raw.b}", title = "video", decs = getString(R.string.longString)),
+            ReelsModel(videoUrl = "android.resource://${packageName}/${R.raw.c}", title = "video", decs = getString(R.string.longString)),
+            ReelsModel(videoUrl = "android.resource://${packageName}/${R.raw.d}", title = "video", decs = getString(R.string.longString)),
+            ReelsModel(videoUrl = "android.resource://${packageName}/${R.raw.e}", title = "video", decs = getString(R.string.longString)),
+            ReelsModel(videoUrl = "android.resource://${packageName}/${R.raw.f}", title = "video", decs = getString(R.string.longString))
+            // Add more videos
+        )
 
-        // Add video to the list
-        reelsList.add(ReelsModel(videoUrl = "android.resource://${packageName}/${R.raw.a}",title = "Title",decs = "Description"))
-        reelsList.add(ReelsModel(videoUrl = "android.resource://${packageName}/${R.raw.b}",title = "Title",decs = "Description"))
-        reelsList.add(ReelsModel(videoUrl = "android.resource://${packageName}/${R.raw.c}",title = "Title",decs = "Description"))
-        reelsList.add(ReelsModel(videoUrl = "android.resource://${packageName}/${R.raw.d}",title = "Title",decs = "Description"))
-        reelsList.add(ReelsModel(videoUrl = "android.resource://${packageName}/${R.raw.e}",title = "Title",decs = "Description"))
-        reelsList.add(ReelsModel(videoUrl = "android.resource://${packageName}/${R.raw.f}",title = "Title",decs = "Description"))
+        reelsAdapter = ReelsAdapter(this@MainActivity, reelsList)
+        val viewPager: ViewPager2 = findViewById(R.id.viewPager)
+        viewPager.adapter = reelsAdapter
 
-        // Initialize the adapter
-        adapter = ReelsAdapter(this, reelsList)
-        binding.viewPager.adapter = adapter
+        viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+            override fun onPageSelected(position: Int) {
+                super.onPageSelected(position)
+
+                if (previousIndex != -1 && previousIndex != position) {
+                    reelsAdapter.pauseVideoAt(previousIndex)
+                    reelsAdapter.setCurrentlyPlayingIndex(-1) // Reset currently playing index
+
+                }
+                reelsAdapter.resumeVideoAt(position)
+                reelsAdapter.setCurrentlyPlayingIndex(position)
+                previousIndex = position
+            }
+        })
+    }
+
+    override fun onStop() {
+        super.onStop()
+        reelsAdapter.releasePlayers()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        reelsAdapter.releasePlayers()
     }
 }

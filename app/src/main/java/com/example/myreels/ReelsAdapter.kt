@@ -1,103 +1,147 @@
 package com.example.myreels
 
+import android.annotation.SuppressLint
 import android.content.Context
-  import android.net.Uri
-import android.util.Log
+import android.media.AudioManager
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
-import android.widget.VideoView
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.exoplayer2.ExoPlayer
+import com.google.android.exoplayer2.MediaItem
+import com.google.android.exoplayer2.Player
+import com.google.android.exoplayer2.ui.PlayerView
+import com.sanjayprajapat.showmoretextview.ShowMoreTextView
+import com.sanjayprajapat.showmoretextview.enums.TextState
+import com.sanjayprajapat.showmoretextview.listener.StateChangeListener
 
 class ReelsAdapter(
     private val context: Context,
     private val reelsList: MutableList<ReelsModel>
-) : RecyclerView.Adapter<ReelsAdapter.ViewHolder>() {
+) : RecyclerView.Adapter<ReelsAdapter.VideoViewHolder>() {
 
-    private val videoViews = mutableListOf<VideoView>()
+    private val exoPlayerList = mutableListOf<ExoPlayer>()
+    private var currentlyPlayingIndex = -1 // Track the currently playing video index
+    private val audioManager: AudioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VideoViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.reels_item, parent, false)
-        return ViewHolder(view)
+        return VideoViewHolder(view)
     }
 
-    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+    override fun onBindViewHolder(holder: VideoViewHolder, position: Int) {
+        holder.titleTextView.text = reelsList[position].title
+        holder.decsTextView.text = reelsList[position].decs
 
-        val reel = reelsList[position]
+        // Initialize ExoPlayer if not already done
+        if (position >= exoPlayerList.size) {
+            val exoPlayer = ExoPlayer.Builder(holder.itemView.context).build()
+            holder.playerView.player = exoPlayer
+            exoPlayerList.add(exoPlayer)
 
-        // Set the video URI
-        holder.videoView.setVideoURI(Uri.parse(reel.videoUrl))
-        holder.reelsTitle.text = reel.title
-        holder.reelsDecs.text = reel.decs
+            val mediaItem = MediaItem.fromUri(reelsList[position].videoUrl)
+            exoPlayer.setMediaItem(mediaItem)
+            exoPlayer.prepare()
 
-        videoViews.add(holder.videoView) // Add VideoView to the list
+            exoPlayer.repeatMode = Player.REPEAT_MODE_ONE
 
-        // Set up video playback
-        holder.videoView.setOnPreparedListener { mp ->
-            mp.start()
-            // Aspect ratio handling...
+            // Set listener to handle playback end
+            exoPlayer.addListener(object : Player.Listener {
+                override fun onPlaybackStateChanged(playbackState: Int) {
+                    if (playbackState == Player.STATE_ENDED) {
+                        exoPlayer.seekTo(0) // Go back to the start
+                        exoPlayer.playWhenReady = false // Do not autoplay after ending
+                    }
+                }
+            })
+        } else {
+            holder.playerView.player = exoPlayerList[position]
         }
 
-        holder.videoView.setOnCompletionListener { mp ->
-            mp.start() // Loop the video
-        }
+        // Control playback based on whether this item is the currently playing video
+        holder.playerView.player?.playWhenReady = currentlyPlayingIndex == position
     }
 
-    override fun getItemCount(): Int {
-        return reelsList.size
-    }
+    override fun getItemCount(): Int = reelsList.size
 
-/*    fun pauseVideos() {
-        for (videoView in videoViews) {
-            videoView.pause()
+
+    @SuppressLint("ClickableViewAccessibility")
+    inner class VideoViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val playerView: PlayerView = itemView.findViewById(R.id.playerView)
+        val titleTextView: TextView = itemView.findViewById(R.id.titleReel)
+        val decsTextView: ShowMoreTextView = itemView.findViewById(R.id.reelDecs)
+        val playPauseOverlay: ImageView = itemView.findViewById(R.id.play_pause_overlay)
+
+        init {
+            // Set tap listener
+            playerView.setOnTouchListener { _, event ->
+                if (event.action == MotionEvent.ACTION_UP) {
+                    togglePlayPause()
+                }
+                true
+            }
         }
-    }
-
-    fun resumeVideos() {
-        for (videoView in videoViews) {
-            videoView.start()
-        }
-    }*/
-
-       /* val reel = reelsList[position]
-
-        // Set the video URI
-        holder.videoView.setVideoURI(Uri.parse(reel.videoUrl))
-        holder.reelsTitle.text = reel.title
-        holder.reelsDecs.text = reel.decs
-
-        // Set up video playback
-        holder.videoView.setOnPreparedListener { mp ->
-            mp.start()
-
-            // Calculate aspect ratio and scale
-            val videoRatio = mp.videoWidth.toFloat() / mp.videoHeight.toFloat()
-            val screenRatio = holder.videoView.width.toFloat() / holder.videoView.height.toFloat()
-            val scale = videoRatio / screenRatio
-
-            if (scale >= 1) {
-                holder.videoView.scaleX = scale
-            } else {
-                holder.videoView.scaleY = 1f / scale
+        private fun togglePlayPause() {
+            val exoPlayer = playerView.player
+            if (exoPlayer != null) {
+                if (exoPlayer.isPlaying) {
+                    exoPlayer.playWhenReady = false
+                    showOverlay(R.drawable.ic_play)
+                } else {
+                    exoPlayer.playWhenReady = true
+                    showOverlay(R.drawable.ic_pause)
+                }
             }
         }
 
-        holder.videoView.setOnCompletionListener { mp ->
-            Log.d("ReelsAdapter", "Video is prepared")
-            mp.start() // Loop the video
-        }
-    }*/
+        private fun showOverlay(iconResId: Int) {
+            playPauseOverlay.setImageResource(iconResId)
+            playPauseOverlay.visibility = View.VISIBLE
 
-    inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        val videoView: VideoView = itemView.findViewById(R.id.videoView)
-        val reelsTitle: TextView = itemView.findViewById(R.id.titleReel)
-        val reelsDecs: TextView = itemView.findViewById(R.id.reelDecs)
-
-        init {
-            // Optional: Release media resources when view is recycled
-            videoView.setOnPreparedListener(null)
-            videoView.setOnCompletionListener(null)
+            // Fade out the overlay after a delay
+            playPauseOverlay.postDelayed({
+                playPauseOverlay.visibility = View.GONE
+            }, 1000) // Show for 1 second
         }
+    }
+
+    fun pauseVideoAt(index: Int) {
+        if (index in exoPlayerList.indices) {
+            exoPlayerList[index].playWhenReady = false
+            abandonAudioFocus()
+        }
+    }
+
+    fun resumeVideoAt(index: Int) {
+        if (index in exoPlayerList.indices) {
+            requestAudioFocus()
+            exoPlayerList[index].playWhenReady = true
+        }
+    }
+
+    private fun requestAudioFocus() {
+        audioManager.requestAudioFocus(
+            null,
+            AudioManager.STREAM_MUSIC,
+            AudioManager.AUDIOFOCUS_GAIN
+        )
+    }
+
+    private fun abandonAudioFocus() {
+        audioManager.abandonAudioFocus(null)
+    }
+
+    fun releasePlayers() {
+        for (player in exoPlayerList) {
+            player.release()
+        }
+        exoPlayerList.clear()
+    }
+
+    fun setCurrentlyPlayingIndex(index: Int) {
+        currentlyPlayingIndex = index
     }
 }
