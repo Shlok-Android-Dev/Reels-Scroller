@@ -53,6 +53,7 @@ dependencies {
 
     //view pager for swipe horizontally between different fragments
     implementation(libs.androidx.viewpager2)
+    implementation(libs.exoplayer)
     //for show more text
     implementation(libs.showmoretextview)
 
